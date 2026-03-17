@@ -1,0 +1,11 @@
+Model Information:
+* title:	Krasue
+* source:	https://sketchfab.com/3d-models/krasue-36e497475a4e4bd2ba706f22dc6f7e09
+* author:	weird model maker (https://sketchfab.com/chand_the_game_maker)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Krasue" (https://sketchfab.com/3d-models/krasue-36e497475a4e4bd2ba706f22dc6f7e09) by weird model maker (https://sketchfab.com/chand_the_game_maker) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)

@@ -1,0 +1,11 @@
+Model Information:
+* title:	Cleaning Cart
+* source:	https://sketchfab.com/3d-models/cleaning-cart-ced9dec64e66451fb2ccedee1fddeaa9
+* author:	Kerridge1 (https://sketchfab.com/Kerridge1)
+
+Model License:
+* license type:	CC-BY-NC-4.0 (http://creativecommons.org/licenses/by-nc/4.0/)
+* requirements:	Author must be credited. No commercial use.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Cleaning Cart" (https://sketchfab.com/3d-models/cleaning-cart-ced9dec64e66451fb2ccedee1fddeaa9) by Kerridge1 (https://sketchfab.com/Kerridge1) licensed under CC-BY-NC-4.0 (http://creativecommons.org/licenses/by-nc/4.0/)

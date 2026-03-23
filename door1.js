@@ -19,6 +19,7 @@ class Door {
     this.obj.setAttribute("height", 5);
 
     let doors = document.createElement("a-box");
+    doors.setAttribute("src", "#doorskin");
     doors.setAttribute("width", 2.5);
     doors.setAttribute("height", 5);
     doors.setAttribute("depth", 0.1);

@@ -21,11 +21,17 @@ class Player{
       angularDamping:0.9,
       linearDamping:0.8
     });
+    
 
     // Start position
-    this.driver.object3D.position.x = this.obj.object3D.position.x;
-    this.driver.object3D.position.y = this.obj.object3D.position.y + 15;
+    // this.driver.object3D.position.x = this.obj.object3D.position.x + 20;
+    // this.driver.object3D.position.y = this.obj.object3D.position.y + 10;
+    // this.driver.object3D.position.z = this.obj.object3D.position.z + -25;
+
+    this.driver.object3D.position.x = this.obj.object3D.position.x + -5;
+    this.driver.object3D.position.y = this.obj.object3D.position.y +8;
     this.driver.object3D.position.z = this.obj.object3D.position.z;
+
 
     scene.append(this.driver);
 

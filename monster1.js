@@ -1,105 +1,224 @@
 class Monster {
-  constructor(x,y,z){
+  constructor(x, y, z) {
     this.obj = document.createElement("a-entity");
-    this.obj.setAttribute("gltf-model","#monsterModel");
-    this.obj.setAttribute("scale","3 3 3");
-    this.obj.setAttribute("position",{x:x,y:y,z:z});
+    this.obj.setAttribute("gltf-model", "#monsterModel");
+    this.obj.setAttribute("scale", "2.5 2.5 2.5");
+    this.obj.setAttribute("position", { x, y, z });
     scene.append(this.obj);
 
-    this.speed = 0.05;        // patrol speed
-    this.chaseSpeed = 0.1;    // chase speed
-    this.turnSpeed = 0.05;
+    // SPEEDS
+    this.patrolSpeed = 0.06;
+    this.chaseSpeed = 0.12;
+    this.speed = this.patrolSpeed;
 
-    this.state = "patrol";
+    // STATE
+    this.mode = "patrol";
+
+    this.currentNode = null;
+    this.targetNode = null;
     this.target = null;
-    this.lastSeenTimer = 0;
+    this.path = [];
 
-    this.floorY = y;          // keep track of original floor height
+    // CHASE SETTINGS
+    this.chaseRange = 18;
+    this.stopChaseRange = 25;
 
-    this.pickTarget();
+    setTimeout(() => {
+      this.currentNode = this.findClosestNode();
+      this.pickRandomTarget();
+    }, 500);
   }
 
-  pickTarget(){
-    let wp = waypoints[Math.floor(Math.random()*waypoints.length)];
-    this.target = wp.object3D.position.clone();
-    this.isStairsTarget = wp.dataset.stairs === "true"; // only climb if stair point
+  // =========================
+  // NODE HELPERS
+  // =========================
+  findClosestNode() {
+    const pos = this.obj.object3D.position;
+    let closest = null, minDist = Infinity;
+
+    waypoints.forEach(w => {
+      const d = pos.distanceTo(w.pos);
+      if (d < minDist) {
+        minDist = d;
+        closest = w;
+      }
+    });
+
+    return closest;
   }
 
-  canSeePlayer(){
-    if(!player || !player.driver) return false;
-    let m = this.obj.object3D.position;
-    let p = player.driver.object3D.position;
-    let dx = p.x - m.x;
-    let dz = p.z - m.z;
-    let dy = p.y - m.y;
-    let dist = Math.sqrt(dx*dx + dz*dz + dy*dy);
-    return dist < 15; // vision range
+  findClosestNodeToPos(worldPos) {
+    let closest = null, minDist = Infinity;
+
+    waypoints.forEach(w => {
+      const d = worldPos.distanceTo(w.pos);
+      if (d < minDist) {
+        minDist = d;
+        closest = w;
+      }
+    });
+
+    return closest;
   }
 
-  update(){
-    let pos = this.obj.object3D.position;
+  // =========================
+  // BFS PATHFINDING
+  // =========================
+  bfs(start, goal) {
+    if (!start || !goal) return [];
+    if (start === goal) return [start];
 
-    // ---- state ----
-    if(this.canSeePlayer()){
-      this.state = "chase";
-      this.lastSeenTimer = 120;
-      this.target = player.driver.object3D.position.clone();
-      this.isStairsTarget = false; // never climb stairs while chasing
-    } else {
-      this.lastSeenTimer--;
-      if(this.lastSeenTimer <= 0 && this.state==="chase"){
-        this.state="patrol";
-        this.pickTarget();
+    const visited = new Set();
+    const queue = [[start]];
+    visited.add(start);
+
+    while (queue.length > 0) {
+      const path = queue.shift();
+      const node = path[path.length - 1];
+
+      for (const neighbor of getNeighbors(node)) {
+        if (visited.has(neighbor)) continue;
+
+        visited.add(neighbor);
+        const newPath = [...path, neighbor];
+
+        if (neighbor === goal) return newPath;
+
+        queue.push(newPath);
       }
     }
 
-    if(!this.target) return;
+    return [];
+  }
 
-    let dx = this.target.x - pos.x;
-    let dz = this.target.z - pos.z;
-    let dy = this.target.y - pos.y;
-    let dist = Math.sqrt(dx*dx + dz*dz);
+  // =========================
+  // PATROL
+  // =========================
+  pickRandomTarget() {
+    if (!this.currentNode) return;
 
-    if(dist < 0.5 && this.state==="patrol"){
-      this.pickTarget();
+    let neighbors = getNeighbors(this.currentNode);
+
+    // 🔥 SAFETY FIX
+    if (neighbors.length === 0) {
+      setTimeout(() => this.pickRandomTarget(), 500);
       return;
     }
 
-    // ---- rotate toward target ----
-    let targetAngle = Math.atan2(dx,dz);
-    let diff = targetAngle - this.obj.object3D.rotation.y;
-    diff = Math.atan2(Math.sin(diff), Math.cos(diff));
-    this.obj.object3D.rotation.y += diff * this.turnSpeed;
+    let next = neighbors[Math.floor(Math.random() * neighbors.length)];
 
-    // ---- move forward ----
-    let speed = this.state==="chase"?this.chaseSpeed:this.speed;
-    let vx = Math.sin(this.obj.object3D.rotation.y) * speed;
-    let vz = Math.cos(this.obj.object3D.rotation.y) * speed;
+    this.targetNode = next;
+    this.target = next.pos.clone();
+  }
 
-    // vertical movement only for patrol on stair points
-    let vy = 0;
-    if(this.state==="patrol" && this.isStairsTarget){
-      vy = dy * 0.05; // climb stairs smoothly
+  // =========================
+  // CHASE
+  // =========================
+  repathToPlayer() {
+    if (!this.currentNode || !player) return;
+
+    const playerPos = player.obj.object3D.position;
+    const playerNode = this.findClosestNodeToPos(playerPos);
+
+    this.path = this.bfs(this.currentNode, playerNode);
+
+    if (this.path.length > 0 && this.path[0] === this.currentNode) {
+      this.path.shift();
     }
 
-    // ---- raycast collision ahead ----
-    let origin = new THREE.Vector3(pos.x,pos.y,pos.z);
-    let dir = new THREE.Vector3(vx,vy,vz).normalize();
-    let raycaster = new THREE.Raycaster(origin,dir,0,0.5);
-    let intersects = raycaster.intersectObjects(scene.object3D.children,true);
-    let blocked = intersects.some(i=>i.object.userData.static);
+    // 🔥 SAFETY FIX
+    if (this.path.length === 0) {
+      setTimeout(() => this.repathToPlayer(), 500);
+      return;
+    }
 
-    if(!blocked){
-      pos.x += vx;
-      pos.z += vz;
-      pos.y += vy;
+    this.targetNode = this.path.shift();
+    this.target = this.targetNode.pos.clone();
+  }
 
-      // always snap y to floor for chase
-      if(this.state==="chase"){
-        pos.y = this.floorY;
+  // =========================
+  // MODE SWITCH
+  // =========================
+  updateMode() {
+    let d = distance(this.obj, player.driver);
+
+    if (this.mode === "patrol" && d < this.chaseRange) {
+      this.mode = "chase";
+      this.speed = this.chaseSpeed;
+      this.repathToPlayer();
+    }
+    else if (this.mode === "chase" && d > this.stopChaseRange) {
+      this.mode = "patrol";
+      this.speed = this.patrolSpeed;
+      this.pickRandomTarget();
+    }
+  }
+
+  // =========================
+  // UPDATE LOOP
+  // =========================
+  update() {
+    this.updateMode();
+
+    // 🔥 SAFETY: always recover if stuck
+    if (!this.target && this.currentNode) {
+      if (this.mode === "chase") {
+        this.repathToPlayer();
+      } else {
+        this.pickRandomTarget();
       }
-    } else {
-      this.pickTarget();
+      return;
+    }
+
+    if (!this.target || !this.currentNode) return;
+
+    const pos = this.obj.object3D.position;
+
+    let dx = this.target.x - pos.x;
+    let dy = this.target.y - pos.y;
+    let dz = this.target.z - pos.z;
+
+    let dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
+
+    // =========================
+    // SNAP TO NODE
+    // =========================
+    if (dist < 0.3) {
+      pos.copy(this.target);
+
+      if (this.targetNode) {
+        this.currentNode = this.targetNode;
+      }
+
+      this.targetNode = null;
+      this.target = null;
+
+      // 🔥 ALWAYS CONTINUE
+      if (this.mode === "chase") {
+        this.repathToPlayer();
+      } else {
+        this.pickRandomTarget();
+      }
+
+      return;
+    }
+
+    // =========================
+    // MOVE
+    // =========================
+    let dir = new THREE.Vector3(dx, dy, dz);
+    dir.normalize();
+    dir.multiplyScalar(this.speed);
+
+    pos.x += dir.x;
+    pos.y += dir.y;
+    pos.z += dir.z;
+
+    // =========================
+    // ROTATE
+    // =========================
+    if (dx !== 0 || dz !== 0) {
+      this.obj.object3D.rotation.y = Math.atan2(dx, dz);
     }
   }
 }
